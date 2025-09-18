@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pixel-Portrait Quest</title>
+  <style>
+    html, body { margin:0; padding:0; background:#0e0e12; color:#e8e8f0; font-family:sans-serif; }
+    #wrap { display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px; }
+    canvas { image-rendering: pixelated; image-rendering: crisp-edges; width:960px; height:auto; border:2px solid #2c2c35; background:#000; }
+    .hud { width:960px; display:flex; justify-content:space-between; align-items:center; font-size:14px; }
+    .inv { display:flex; gap:6px; align-items:center; }
+    .inv .slot { width:26px; height:26px; border:1px solid #333; background:#121218; display:grid; place-items:center; font-size:12px; }
+    .panel { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.7); z-index:5; }
+    .card { width:min(820px,92vw); background:#111117; border:1px solid #2e2e39; padding:16px; }
+    .card h1 { margin:0 0 8px; font-size:20px; }
+    .card .btns { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    button { cursor:pointer; background:#2b2b6f; color:white; border:0; padding:8px 10px; font-weight:600; }
+    button.secondary { background:#30303a; }
+    .toast { position:fixed; bottom:12px; left:50%; transform:translateX(-50%); background:#111; padding:8px 12px; border:1px solid #2d2d2d; display:none; }
+    .shopBG { width:100%; height:auto; display:block; border:1px solid #2b2b34; margin:8px 0 12px; }
+    .portrait { width:160px; height:auto; border:1px solid #2b2b34; background:#0a0a0a; }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <canvas id="game" width="960" height="540"></canvas>
+    <div class="hud">
+      <div id="status">Goal: –</div>
+      <div class="inv" id="inv"></div>
+      <div>Scene: <span id="sceneName">–</span> • Controls: Left/Right • E: Door • I: Inventory</div>
+    </div>
+  </div>
+
+  <div class="panel" id="modal">
+    <div class="card">
+      <h1>Why do you want a shoot?</h1>
+      <p>Your choice changes what matters and how the studio finale plays out.</p>
+      <div class="btns">
+        <button data-goal="model">I need a portfolio (Actor/Model)</button>
+        <button data-goal="self">I want photos for myself (Self-Love)</button>
+        <button data-goal="family">For family/friends</button>
+      </div>
+      <p style="opacity:.7;margin-top:8px">Tip: Budget is limited. You can't buy everything.</p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="game.js"></script>
+</body>
+</html>
