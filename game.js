@@ -1,4 +1,4 @@
-// --- Pixel-Portrait Quest (Startscreen + Large Portraits build) ---
+// --- Pixel-Portrait Quest (Startscreen + Large Portraits + Option A Perfect Rules) ---
 
 // DOM refs
 const canvas = document.getElementById('game');
@@ -15,10 +15,7 @@ const sceneNameEl = document.getElementById('sceneName');
     .portrait{ display:block; margin:14px auto; width:100%; max-width:520px; image-rendering: pixelated; }
     .panel .card img.shopBG{ width:100%; max-width:900px; display:block; margin:0 auto 8px; image-rendering: pixelated; }
     @keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:.25} }
-    .start-overlay{
-      position:fixed; inset:0; background:#0b0d14; display:flex; align-items:center; justify-content:center;
-      z-index:9999;
-    }
+    .start-overlay{ position:fixed; inset:0; background:#0b0d14; display:flex; align-items:center; justify-content:center; z-index:9999; }
     .start-card{ position:relative; max-width:960px; width:96%; }
     .start-card img{ width:100%; display:block; image-rendering: pixelated; border-radius:8px; }
     .start-press{
@@ -44,7 +41,6 @@ let started = false;           // gates the game behind start screen
 addEventListener('keydown',(e)=>{
   const k=e.key.toLowerCase();
   if(!started){
-    // any key starts
     startGameFromOverlay();
     e.preventDefault();
     return;
@@ -159,7 +155,8 @@ function startGameFromOverlay(){
   if(started) return;
   started = true;
   if(startOverlay){ startOverlay.remove(); startOverlay=null; }
-  // jetzt erst Spiel starten: Zielauswahl öffnen
+  // Konsolen-Check: Perfect-Machbarkeit je Pfad
+  logPerfectFeasibility();
   openGoalPicker();
 }
 
@@ -232,13 +229,15 @@ function openPlace(name,interiorKey){
   panel.querySelector('#leave').addEventListener('click',()=>document.body.removeChild(panel));
 }
 
-// Finale (große Portraits) + Easter Egg
+// ===== Finale (Option A Regeln) + Easter Egg =====
 function goStudio(){
   if(!game.goal){ showToast('Pick your goal first.'); return; }
   const rules=GOAL_RULES[game.goal]; const have=(id)=> game.inventory.some(i=>i.id===id);
   const scoreReq=rules.wants.reduce((ok,id)=>ok+(have(id)?1:0),0);
   const scoreNice=rules.nice.reduce((ok,id)=>ok+(have(id)?1:0),0);
   const total=scoreReq*2+scoreNice;
+
+  const allReq = (scoreReq === rules.wants.length);
   let verdict,note,imgKey;
 
   // Easter Egg: Café + keine Items + Goal Self/Family → Perfect Shot
@@ -246,8 +245,16 @@ function goStudio(){
     verdict='Perfect Shot';
     note='Come as you are. No props, no extras. Just you. That’s always enough.';
     imgKey='perfect';
-  } else if(scoreReq===rules.wants.length){
-    if(total>=rules.wants.length*2+1){ verdict='Perfect Shot'; note='Everything clicks. You nailed it.'; imgKey='perfect'; }
+
+  // ----- Option A: Actor/Model Perfect = alle Wants reichen -----
+  } else if(game.goal==='model' && allReq){
+    verdict='Perfect Shot';
+    note='You brought the essentials. Clean, professional, ready to book.';
+    imgKey='perfect';
+
+  // Default-Regel für andere Pfade (Self/Family)
+  } else if(allReq){
+    if(total >= rules.wants.length*2 + 1){ verdict='Perfect Shot'; note='Everything clicks. You nailed it.'; imgKey='perfect'; }
     else { verdict='Good Take'; note='Basics work. We’ll polish the rest.'; imgKey='good'; }
   } else if(scoreReq>0){ verdict='Okayish'; note='Something is missing. Let’s call it “artistic”.'; imgKey='okay'; }
   else { verdict='Fail'; note='Hey, at least you showed up.'; imgKey='fail'; }
@@ -310,12 +317,9 @@ function drawPlayer(){
 }
 
 function draw(){
-  // draw BG scaled to canvas
   const sc=SCENES[game.scene]; const img=BG[sc.bg];
   if(img.complete&&img.naturalWidth){ resizeCanvasToBG(img); ctx.drawImage(img,0,0,canvas.width,canvas.height); }
-  // edge hints
   ctx.fillStyle='#ffffffaa'; ctx.fillText('←', 8, 18); ctx.fillText('→', canvas.width-18, 18);
-  // door hint
   const px=game.player.x/canvas.width; const near=sc.doors.find(d=>Math.abs(px-d.px)<d.tol); if(near){ ctx.fillStyle='#fff'; ctx.fillText('E: Door',Math.floor(pxToX(near.px)-12),20); }
   drawPlayer();
 }
@@ -323,7 +327,33 @@ function draw(){
 function loop(ts){ const dt=Math.min(33,ts-loop.last||16); loop.last=ts; update(dt); draw(); requestAnimationFrame(loop); }
 function resetGame(keepMoney=false){ game.inventory=[]; if(!keepMoney) world.money=30; game.visitedCafé=false; renderInv(); spawn('street1',0.06); }
 
+// ===== Console helper: Perfect feasibility summary =====
+function logPerfectFeasibility(){
+  const prices = {
+    outfit: 14, portfolio: 12, script: 8, makeup: 9, bouquet: 12, album: 10, flower: 5
+  };
+  const budget = world.money;
+  const canBuy = (arr)=> arr.reduce((s,id)=> s+prices[id],0) <= budget;
+
+  const selfReq  = ['makeup','flower'];
+  const selfNice = ['album','outfit','portfolio']; // min 1
+  const selfOK   = canBuy(selfReq) && selfNice.some(n=> canBuy([...selfReq, n]));
+
+  const famReq   = ['album','bouquet'];
+  const famNice  = ['outfit','makeup'];            // min 1, aber beide zu teuer mit Req
+  const famOK    = false; // kaufbasiert unmöglich; Easter Egg möglich
+
+  const modelReq = ['outfit','portfolio'];
+  const modelOK  = canBuy(modelReq);               // Option A: reicht für Perfect
+
+  console.log('%cPerfect feasibility (Budget €'+budget+')',
+              'background:#222;color:#0f0;padding:2px 6px;border-radius:3px');
+  console.log('Self-Love:   purchase-based Perfect =', selfOK, '| (Easter Egg not needed)');
+  console.log('Family/Friends: purchase-based Perfect =', famOK, '| Easter Egg = true');
+  console.log('Actor/Model: purchase-based Perfect =', modelOK, '(Option A active)');
+}
+
 // boot
 renderInv(); spawn('street1',0.06);
-buildStartOverlay();      // <— Startscreen zeigen
+buildStartOverlay();      // Startscreen zeigen
 requestAnimationFrame(loop);
